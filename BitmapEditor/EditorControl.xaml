@@ -1,0 +1,21 @@
+﻿<UserControl x:Class="BitmapEditor.EditorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:BitmapEditor"
+             mc:Ignorable="d" 
+             d:DesignHeight="750" d:DesignWidth="750"
+             Loaded="OnLoaded">
+    <Canvas x:Name="BitmapCanvas" Background="DarkGray"
+        MouseWheel="Canvas_OnScroll" 
+        SizeChanged="Canvas_OnSizeChanged"
+        MouseMove="Canvas_OnMouseMove"
+        MouseRightButtonDown="Canvas_OnRightMouseButtonDown">
+        <Image x:Name="BitmapPreview" 
+            MinHeight="750"
+            MinWidth="750"
+            RenderOptions.BitmapScalingMode="NearestNeighbor"
+            MouseLeftButtonUp="OnPixelClick"/>
+    </Canvas>
+</UserControl>
