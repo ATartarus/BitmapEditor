@@ -10,7 +10,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="images\black.bmp" />
+    <None Remove="images\testImage.bmp" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="images\black.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="images\testImage.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
 
 </Project>

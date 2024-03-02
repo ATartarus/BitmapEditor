@@ -1,35 +1,33 @@
-﻿using System.Drawing.Imaging;
-using System.Drawing;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using System.Windows.Media;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using win = System.Windows;
 
 
 namespace BitmapEditor
 {
-    /// <summary>
-    /// Interaction logic for EditorControl.xaml
-    /// </summary>
     public partial class EditorControl : UserControl, INotifyPropertyChanged
     {
-        private WriteableBitmap bitmap;
-        private byte[] rawBitmapData;
-        private win.Size bitmapPixelSize;
+        private BitmapModel bitmapModel;
 
+        private Size bitmapPixelSize;
         private (int X, int Y) selectedPixel;
-        private win.Shapes.Rectangle selectionRect;
+        private Rectangle selectionRect;
+
         private double scrollFactor = 0.2;
-        private win.Point lastMousePos;
+        private Point lastMousePos;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public WriteableBitmap Bitmap { get => bitmap; }
-        public byte[] RawBitmapData { get => (byte[])rawBitmapData.Clone(); }
-        private win.Size BitmapPixelSize
+        public bool IsBitmapBinary
+        {
+            get => bitmapModel.IsBinary;
+        }
+
+        private Size BitmapPixelSize
         {
             get => bitmapPixelSize;
             set
@@ -39,8 +37,6 @@ namespace BitmapEditor
                 selectionRect.Height = bitmapPixelSize.Height;
             }
         }
-        public int BytesPerPixel { get; private set; }
-        public int Stride { get; private set; }
 
         public (int X, int Y) SelectedPixel
         {
@@ -51,115 +47,65 @@ namespace BitmapEditor
                 if (!selectionRect.IsVisible) selectionRect.Visibility = Visibility.Visible;
                 UpdateSelectionRectPosition();
                 OnPropertyChanged();
-                OnPropertyChanged("SelectedPixelValue");
+                OnPropertyChanged("SelectedPixelColor");
             }
         }
-        public win.Media.Color SelectedPixelValue
+
+        public Color SelectedPixelColor
         {
-            get
-            {
-                int ind = SelectedPixel.Y * Stride + SelectedPixel.X * BytesPerPixel;
-                win.Media.Color color = new()
-                {
-                    R = rawBitmapData[ind + 2],
-                    G = rawBitmapData[ind + 1],
-                    B = rawBitmapData[ind],
-                };
-                return color;
-            }
+            get => bitmapModel.GetPixelColor(selectedPixel);
         }
 
 
         public EditorControl()
         {
             InitializeComponent();
-            Load(@"C:\BNTU\Image Processing\IPLab1\IPLab1\black.bmp");
+            bitmapModel = new BitmapModel(@"pack://application:,,,/BitmapEditor;component/images/testImage.bmp");
+            BitmapPreview.Source = bitmapModel.Bitmap;
+            bitmapModel.PixelChanged += ((int X, int Y) pixel, Color color) =>
+            {
+                if (pixel == SelectedPixel) OnPropertyChanged("SelectedPixelColor");
+            };
 
             selectionRect = new()
             {
                 StrokeThickness = 1,
-                Stroke = win.Media.Brushes.Black
+                Stroke = Brushes.Black
             };
             BitmapCanvas.Children.Add(selectionRect);
             selectionRect.Visibility = Visibility.Hidden;
         }
 
-        public void Load(string uri)
+        public void LoadBitmap(string url)
         {
-            BitmapImage bmp = new();
-            bmp.BeginInit();
-            bmp.UriSource = new Uri(uri, UriKind.RelativeOrAbsolute);
-            bmp.EndInit();
-
-            bitmap = new(bmp);
-
-            Stride = Bitmap.PixelWidth * ((Bitmap.Format.BitsPerPixel + 7) / 8);
-            BytesPerPixel = (Bitmap.Format.BitsPerPixel + 7) / 8;
-
-
-            rawBitmapData = new byte[Bitmap.PixelHeight * Stride];
-            Bitmap.CopyPixels(rawBitmapData, Stride, 0);
-
-            BitmapPreview.Source = Bitmap;
+            bitmapModel.Load(url);
         }
 
-        public void Save(string uri)
+        public void SaveBitmap(string url)
         {
-            Bitmap bmp = new Bitmap(Bitmap.PixelWidth, Bitmap.PixelHeight, PixelFormat.Format32bppArgb);
-
-            BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, Bitmap.PixelWidth, Bitmap.PixelHeight),
-                ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-
-            Bitmap.WritePixels(new Int32Rect(0, 0, Bitmap.PixelWidth, Bitmap.PixelHeight), rawBitmapData, Stride, 0);
-            Bitmap.CopyPixels(Int32Rect.Empty, bitmapData.Scan0, bitmapData.Height * bitmapData.Stride, bitmapData.Stride);
-
-            bmp.UnlockBits(bitmapData);
-
-            bmp.Save(uri, ImageFormat.Bmp);
-            bmp.Dispose();
+            bitmapModel.Save(url);
         }
 
-        public unsafe void ChangeMask(int colorOffset, bool hide)
+        public void BindDataGrid(DataGrid dataGrid, ColorOffset colorOffset)
         {
-            //Bitmap.Lock();
-
-            //byte* bitmapBuffer = (byte*)Bitmap.BackBuffer.ToPointer();
-            //int bytesPerPixel = (Bitmap.Format.BitsPerPixel + 7) / 8;
-
-            //for (int y = 0; y < Bitmap.PixelHeight; y++)
-            //{
-            //    for (int x = 0; x < Bitmap.PixelWidth; x++)
-            //    {
-            //        int offset = y * Stride + x * bytesPerPixel;
-
-            //        bitmapBuffer[offset + colorOffset] = hide ? (byte)0 : rawBitmapData[offset + colorOffset];
-            //    }
-            //}
-
-            //Bitmap.AddDirtyRect(new Int32Rect(0, 0, Bitmap.PixelWidth, Bitmap.PixelHeight));
-            //Bitmap.Unlock();
+            bitmapModel.BindDataGrid(dataGrid, colorOffset);
         }
 
-        public unsafe void ChangePixel(int colorOffset, byte colorValue)
+        public unsafe void ChangeMask(ColorOffset colorOffset, bool hide)
         {
-            Bitmap.Lock();
+            bitmapModel.ChangeMask(colorOffset, hide);
+        }
 
-            byte* bitmapBuffer = (byte*)Bitmap.BackBuffer.ToPointer();
-            int bytesPerPixel = (Bitmap.Format.BitsPerPixel + 7) / 8;
+        public unsafe void ChangePixel(ColorOffset colorOffset, byte colorValue)
+        {
+            bitmapModel.ChangePixel(SelectedPixel, colorOffset, colorValue);
 
-            int index = SelectedPixel.Y * Stride + SelectedPixel.X * bytesPerPixel;
-            bitmapBuffer[index + colorOffset] = colorValue;
-            rawBitmapData[index + colorOffset] = colorValue;
-
-            Bitmap.AddDirtyRect(new Int32Rect(SelectedPixel.X, SelectedPixel.Y, 1, 1));
-            Bitmap.Unlock();
-
-            OnPropertyChanged("SelectedPixelValue");
+            OnPropertyChanged("SelectedPixelColor");
         }
 
         private void OnPixelClick(object sender, MouseButtonEventArgs e)
         {
-            win.Point pos = e.GetPosition(BitmapPreview);
+            Point pos = e.GetPosition(BitmapPreview);
             SelectedPixel = new(
                 (int)(pos.X / BitmapPixelSize.Width),
                 (int)(pos.Y / BitmapPixelSize.Height)
@@ -176,21 +122,22 @@ namespace BitmapEditor
             BitmapPreview.Width = BitmapPreview.ActualWidth + offset.X;
             BitmapPreview.Height = BitmapPreview.ActualHeight + offset.Y;
 
-            BitmapPixelSize = new win.Size(
-                BitmapPreview.Width / Bitmap.PixelWidth,
-                BitmapPreview.Height / Bitmap.PixelHeight
+            BitmapPixelSize = new Size(
+                BitmapPreview.Width / bitmapModel.Bitmap.PixelWidth,
+                BitmapPreview.Height / bitmapModel.Bitmap.PixelHeight
             );
+
             if (BitmapPreview.Width < BitmapPreview.MinWidth)
             {
-                BitmapPixelSize = new win.Size(
-                    BitmapPreview.MinWidth / Bitmap.PixelWidth,
-                    BitmapPreview.MinHeight / Bitmap.PixelHeight
+                BitmapPixelSize = new Size(
+                    BitmapPreview.MinWidth / bitmapModel.Bitmap.PixelWidth,
+                    BitmapPreview.MinHeight / bitmapModel.Bitmap.PixelHeight
                 );
             }
 
             if ((int)BitmapPreview.ActualHeight == (int)BitmapPreview.MinHeight && offset.Y < 0) return;
 
-            win.Point mousePos = e.GetPosition(this);
+            Point mousePos = e.GetPosition(this);
             (double X, double Y) shiftRatio = new(
                 (mousePos.X - Canvas.GetLeft(BitmapPreview)) / BitmapPreview.ActualWidth,
                 (mousePos.Y - Canvas.GetTop(BitmapPreview)) / BitmapPreview.ActualHeight
@@ -217,7 +164,7 @@ namespace BitmapEditor
         {
             if (e.RightButton != MouseButtonState.Pressed) return;
 
-            win.Point currentPos = e.GetPosition(this);
+            Point currentPos = e.GetPosition(this);
             (double X, double Y) delta = new(
                 currentPos.X - lastMousePos.X,
                 currentPos.Y - lastMousePos.Y
@@ -235,12 +182,12 @@ namespace BitmapEditor
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            selectionRect.Height = BitmapPreview.ActualHeight / Bitmap.PixelHeight;
-            selectionRect.Width = BitmapPreview.ActualWidth / Bitmap.PixelWidth;
+            selectionRect.Height = BitmapPreview.ActualHeight / bitmapModel.Bitmap.PixelHeight;
+            selectionRect.Width = BitmapPreview.ActualWidth / bitmapModel.Bitmap.PixelWidth;
 
-            BitmapPixelSize = new win.Size(
-                BitmapPreview.ActualWidth / Bitmap.PixelWidth,
-                BitmapPreview.ActualHeight / Bitmap.PixelHeight
+            BitmapPixelSize = new Size(
+                BitmapPreview.ActualWidth / bitmapModel.Bitmap.PixelWidth,
+                BitmapPreview.ActualHeight / bitmapModel.Bitmap.PixelHeight
             );
         }
 
@@ -248,7 +195,7 @@ namespace BitmapEditor
         {
             if (!this.IsLoaded) return;
 
-            win.Point bitmapPos = new(
+            Point bitmapPos = new(
                 Canvas.GetLeft(BitmapPreview),
                 Canvas.GetTop(BitmapPreview)
             );
@@ -263,7 +210,7 @@ namespace BitmapEditor
             Canvas.SetTop(element, Canvas.GetTop(element) + distance.y);
         }
 
-        public void OnPropertyChanged([CallerMemberName] string prop = "")
+        private void OnPropertyChanged([CallerMemberName] string prop = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         }

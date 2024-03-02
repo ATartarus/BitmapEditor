@@ -152,17 +152,17 @@
                         <StackPanel Orientation="Horizontal" Margin="5, 5, 10, 0" Background="PaleVioletRed">
                             <TextBlock Width="25" Padding="5, 0, 0, 0">R</TextBlock>
                             <TextBox x:Name="RedValue" PreviewKeyDown="OnTextInput" 
-                                     Text="{Binding ElementName=BitmapEditor, Path=SelectedPixelValue.R}"/>
+                                     Text="{Binding ElementName=BitmapEditor, Path=SelectedPixelColor.R}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="5, 5, 10, 0" Background="LightGreen">
                             <TextBlock Width="25" Padding="5, 0, 0, 0">G</TextBlock>
                             <TextBox x:Name="GreenValue" PreviewKeyDown="OnTextInput"
-                                     Text="{Binding ElementName=BitmapEditor, Path=SelectedPixelValue.G}"/>
+                                     Text="{Binding ElementName=BitmapEditor, Path=SelectedPixelColor.G}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="5, 5, 10, 0" Background="CornflowerBlue">
                             <TextBlock Width="25" Padding="5, 0, 0, 0">B</TextBlock>
                             <TextBox x:Name="BlueValue" PreviewKeyDown="OnTextInput"
-                                     Text="{Binding ElementName=BitmapEditor, Path=SelectedPixelValue.B}"/>
+                                     Text="{Binding ElementName=BitmapEditor, Path=SelectedPixelColor.B}"/>
                         </StackPanel>
                     </StackPanel>
                 </TabItem.Content>
@@ -177,15 +177,15 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <DataGrid ScrollViewer.CanContentScroll="False" x:Name="RedMatrix" Grid.Row="0" Style="{StaticResource BitmapMatrix}"
+                            <DataGrid x:Name="RedMatrix" ScrollViewer.CanContentScroll="False" Grid.Row="0" Style="{StaticResource BitmapMatrix}"
                                   BorderBrush="PaleVioletRed" SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
-                            <DataGrid ScrollViewer.CanContentScroll="False" x:Name="GreenMatrix" Grid.Row="1" Style="{StaticResource BitmapMatrix}"
+                            <DataGrid x:Name="GreenMatrix" ScrollViewer.CanContentScroll="False" Grid.Row="1" Style="{StaticResource BitmapMatrix}"
                                   BorderBrush="LightGreen" SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
-                            <DataGrid ScrollViewer.CanContentScroll="False" x:Name="BlueMatrix" Grid.Row="2" Style="{StaticResource BitmapMatrix}"
+                            <DataGrid x:Name="BlueMatrix" ScrollViewer.CanContentScroll="False" Grid.Row="2" Style="{StaticResource BitmapMatrix}"
                                   BorderBrush="CornflowerBlue" SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
                         </Grid>
                         <Grid x:Name="BlackMatrices" IsEnabled="False" Visibility="Hidden">
-                            <DataGrid ScrollViewer.CanContentScroll="False" x:Name="BlackMatrix" Style="{StaticResource BitmapMatrix}"
+                            <DataGrid x:Name="BlackMatrix" ScrollViewer.CanContentScroll="False" Style="{StaticResource BitmapMatrix}"
                                       SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
                         </Grid>
                     </Grid>

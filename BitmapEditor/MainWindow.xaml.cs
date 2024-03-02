@@ -3,13 +3,8 @@ using System.Data;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace BitmapEditor
 {
@@ -20,7 +15,7 @@ namespace BitmapEditor
             InitializeComponent();
             BitmapEditor.PropertyChanged += OnSelectedPixelChanged;
 
-            BindBitmapToDataGrids();
+            BindDataGrids();
         }
 
         private void OnTextInput(object sender, KeyEventArgs e)
@@ -33,9 +28,9 @@ namespace BitmapEditor
                 if (str == "") str = "0";
                 if (byte.TryParse(str, out byte color))
                 {
-                    int colorOffset = 0;
-                    if (sender == GreenValue) colorOffset = 1;
-                    else if (sender == RedValue) colorOffset = 2;
+                    ColorOffset colorOffset = ColorOffset.Blue;
+                    if (sender == GreenValue) colorOffset = ColorOffset.Green;
+                    else if (sender == RedValue) colorOffset = ColorOffset.Red;
 
                     BitmapEditor.ChangePixel(colorOffset, color);
                 }
@@ -46,9 +41,9 @@ namespace BitmapEditor
         {
             if (sender is not CheckBox) return;
 
-            int colorOffset = 0;
-            if (sender == GreenMask) colorOffset = 1;
-            else if (sender == RedMask) colorOffset = 2;
+            ColorOffset colorOffset = ColorOffset.Blue;
+            if (sender == GreenMask) colorOffset = ColorOffset.Green;
+            else if (sender == RedMask) colorOffset = ColorOffset.Red;
 
             bool hide = !((CheckBox)sender).IsChecked ?? false;
 
@@ -66,7 +61,7 @@ namespace BitmapEditor
 
             if (result == true)
             {
-                BitmapEditor.Load(filePicker.FileName);
+                BitmapEditor.LoadBitmap(filePicker.FileName);
             }
         }
 
@@ -81,7 +76,7 @@ namespace BitmapEditor
 
             if (result == true)
             {
-                BitmapEditor.Save(filePicker.FileName);
+                BitmapEditor.SaveBitmap(filePicker.FileName);
             }
         }
 
@@ -103,94 +98,28 @@ namespace BitmapEditor
             }
         }
 
-        private void BindBitmapToDataGrids()
+        private void BindDataGrids()
         {
-            byte[] bitmapData = BitmapEditor.RawBitmapData;
-
-            bool black = true;
-            for (int i = 0; i < bitmapData.Length; i++)
-            {
-                if (bitmapData[i] != 0 && bitmapData[i] != 255) black = false;
-            }
-
-            if (black)
+            if (BitmapEditor.IsBitmapBinary)
             {
                 ColorMatrices.IsEnabled = false;
                 ColorMatrices.Visibility = Visibility.Hidden;
                 BlackMatrices.IsEnabled = true;
                 BlackMatrices.Visibility = Visibility.Visible;
 
-                DataTable dataTable = new DataTable();
-
-                for (int i = 0; i < BitmapEditor.Bitmap.PixelWidth; i++)
-                {
-                    dataTable.Columns.Add(null, typeof(byte));
-                }
-
-                for (int i = 0; i < BitmapEditor.Bitmap.PixelHeight; i++)
-                {
-                    DataRow row = dataTable.NewRow();
-                    for (int j = 0; j < BitmapEditor.Bitmap.PixelWidth; j++)
-                    {
-                        row[j] = bitmapData[i * BitmapEditor.Stride + j * BitmapEditor.BytesPerPixel] > 0 ? 0 : 1;
-                    }
-                    dataTable.Rows.Add(row);
-                }
-
-                dataTable.ColumnChanged += (sender, e) =>
-                {
-                    if (e.ProposedValue is byte color)
-                    {
-                        BitmapEditor.ChangePixel(0, color == (byte)0 ? (byte)255 : (byte)0);
-                        BitmapEditor.ChangePixel(1, color == (byte)0 ? (byte)255 : (byte)0);
-                        BitmapEditor.ChangePixel(2, color == (byte)0 ? (byte)255 : (byte)0);
-                    }
-                };
-
-                BlackMatrix.ItemsSource = dataTable.DefaultView;
+                BitmapEditor.BindDataGrid(BlackMatrix, ColorOffset.Black);
             }
             else
             {
-                for (int n = 0; n < 3; n++)
+                ColorMatrices.IsEnabled = true;
+                ColorMatrices.Visibility = Visibility.Visible;
+                BlackMatrices.IsEnabled = false;
+                BlackMatrices.Visibility = Visibility.Hidden;
+
+                DataGrid[] grids = [BlueMatrix, GreenMatrix, RedMatrix];
+                for (int i = 0; i < 3; i++)
                 {
-                    DataTable dataTable = new DataTable();
-
-                    for (int i = 0; i < BitmapEditor.Bitmap.PixelWidth; i++)
-                    {
-                        dataTable.Columns.Add(null, typeof(byte));
-                    }
-
-                    for (int i = 0; i < BitmapEditor.Bitmap.PixelHeight; i++)
-                    {
-                        DataRow row = dataTable.NewRow();
-                        for (int j = 0; j < BitmapEditor.Bitmap.PixelWidth; j++)
-                        {
-                            row[j] = bitmapData[i * BitmapEditor.Stride + j * BitmapEditor.BytesPerPixel + n];
-                        }
-                        dataTable.Rows.Add(row);
-                    }
-
-                    int offset = n;
-                    dataTable.ColumnChanged += (sender, e) =>
-                    {
-                        if (e.ProposedValue is byte color)
-                        {
-                            BitmapEditor.ChangePixel(offset, color);
-                        }
-                    };
-
-                    switch (n)
-                    {
-                        case 0:
-                            BlueMatrix.ItemsSource = dataTable.DefaultView;
-                            break;
-                        case 1:
-                            GreenMatrix.ItemsSource = dataTable.DefaultView;
-                            break;
-                        case 2:
-                            RedMatrix.ItemsSource = dataTable.DefaultView;
-                            break;
-                    }
+                    BitmapEditor.BindDataGrid(grids[i], (ColorOffset)i);
                 }
             }
         }
