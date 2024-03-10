@@ -102,25 +102,17 @@ namespace BitmapEditor
         {
             if (BitmapEditor.IsBitmapBinary)
             {
-                ColorMatrices.IsEnabled = false;
-                ColorMatrices.Visibility = Visibility.Hidden;
-                BlackMatrices.IsEnabled = true;
-                BlackMatrices.Visibility = Visibility.Visible;
-
-                BitmapEditor.BindDataGrid(BlackMatrix, ColorOffset.Black);
+                BitmapEditor.BindDataGrid(BlackMatrix, ColorOffset.All);
             }
             else
             {
-                ColorMatrices.IsEnabled = true;
-                ColorMatrices.Visibility = Visibility.Visible;
-                BlackMatrices.IsEnabled = false;
-                BlackMatrices.Visibility = Visibility.Hidden;
+                BinaryEditorTab.IsEnabled = false;
+            }
 
-                DataGrid[] grids = [BlueMatrix, GreenMatrix, RedMatrix];
-                for (int i = 0; i < 3; i++)
-                {
-                    BitmapEditor.BindDataGrid(grids[i], (ColorOffset)i);
-                }
+            DataGrid[] grids = [BlueMatrix, GreenMatrix, RedMatrix];
+            for (int i = 0; i < 3; i++)
+            {
+                BitmapEditor.BindDataGrid(grids[i], (ColorOffset)i);
             }
         }
 
@@ -176,12 +168,23 @@ namespace BitmapEditor
                 ScrollGridsIntoView();
             }
         }
-
+        
         private void SelectGridsCell(int row, int col)
         {
             DataGrid[] grids;
-            if (BlackMatrix.IsEnabled) grids = [BlackMatrix];
-            else grids = [RedMatrix, GreenMatrix, BlueMatrix];
+            if (BinaryEditorTab.IsSelected)
+            {
+                grids = [BlackMatrix];
+            }
+            else if (RgbEditorTab.IsSelected) 
+            {
+                grids = [RedMatrix, GreenMatrix, BlueMatrix];
+            }
+            else
+            {
+                return;
+            }
+
             foreach (DataGrid grid in grids)
             {
                 grid.SelectedCellsChanged -= DataGrid_OnSelectedCellsChanged;
@@ -202,8 +205,14 @@ namespace BitmapEditor
         private void ScrollGrids(double? verticalOffset, double? horizontalOffset)
         {
             DataGrid[] grids;
-            if (BlackMatrix.IsEnabled) grids = [BlackMatrix];
-            else grids = [RedMatrix, GreenMatrix, BlueMatrix];
+            if (BinaryEditorTab.IsSelected)
+            {
+                grids = [BlackMatrix];
+            }
+            else
+            {
+                grids = [RedMatrix, GreenMatrix, BlueMatrix];
+            }
             ScrollViewer?[] scrolls = new ScrollViewer[grids.Length];
 
             for (int i = 0; i < scrolls.Length; i++)
@@ -226,13 +235,27 @@ namespace BitmapEditor
 
         private void ScrollGridsIntoView()
         {
+            DataGrid targetGrid;
+            if (BinaryEditorTab.IsSelected)
+            {
+                targetGrid = BlackMatrix;
+            }
+            else if (RgbEditorTab.IsSelected)
+            {
+                targetGrid = RedMatrix;
+            }
+            else
+            {
+                return;
+            }
+
             Size offset = new(
-                BitmapEditor.SelectedPixel.X * RedMatrix.ColumnWidth.Value,
-                BitmapEditor.SelectedPixel.Y * RedMatrix.RowHeight
+                BitmapEditor.SelectedPixel.X * targetGrid.ColumnWidth.Value,
+                BitmapEditor.SelectedPixel.Y * targetGrid.RowHeight
             );
             Size half = new(
-                RedMatrix.ActualWidth / 2 - RedMatrix.ColumnWidth.Value / 2,
-                RedMatrix.ActualHeight / 2 - RedMatrix.RowHeight / 2
+                targetGrid.ActualWidth / 2 - targetGrid.ColumnWidth.Value / 2,
+                targetGrid.ActualHeight / 2 - targetGrid.RowHeight / 2
             );
 
             if (offset.Width - half.Width > 0) offset.Width -= half.Width;
@@ -243,12 +266,19 @@ namespace BitmapEditor
             ScrollGrids(offset.Height, offset.Width);
         }
 
-        private void SideBar_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void OnTwoWavesClick(object sender, RoutedEventArgs e)
         {
-            if (e.AddedItems[0] == MatrixEditorTab)
-                BitmapEditor.PropertyChanged += OnSelectedPixelChanged;
-            else
-                BitmapEditor.PropertyChanged -= OnSelectedPixelChanged;
+            BitmapEditor.TwoWavesShading();
+            //BindDataGrids();
+        }
+
+        private void DataGrid_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (((UIElement)sender).IsVisible)
+            {
+                SelectGridsCell(BitmapEditor.SelectedPixel.Y, BitmapEditor.SelectedPixel.X);
+                ScrollGridsIntoView();
+            }
         }
     }
 }

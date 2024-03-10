@@ -103,6 +103,11 @@ namespace BitmapEditor
             OnPropertyChanged("SelectedPixelColor");
         }
 
+        public void TwoWavesShading()
+        {
+            bitmapModel.TwoWavesShading();
+        }
+
         private void OnPixelClick(object sender, MouseButtonEventArgs e)
         {
             Point pos = e.GetPosition(BitmapPreview);

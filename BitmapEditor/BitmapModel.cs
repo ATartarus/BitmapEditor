@@ -13,7 +13,7 @@ namespace BitmapEditor
         Blue,
         Green,
         Red,
-        Black
+        All
     }
 
     public class BitmapModel
@@ -56,8 +56,8 @@ namespace BitmapEditor
 
             bitmap = new(bmp);
 
-            Stride = Bitmap.PixelWidth * ((Bitmap.Format.BitsPerPixel + 7) / 8);
             BytesPerPixel = (Bitmap.Format.BitsPerPixel + 7) / 8;
+            Stride = Bitmap.PixelWidth * BytesPerPixel;
 
             rawBitmapData = new byte[Bitmap.PixelHeight * Stride];
             Bitmap.CopyPixels(rawBitmapData, Stride, 0);
@@ -127,12 +127,17 @@ namespace BitmapEditor
             Bitmap.Lock();
 
             byte* bitmapBuffer = (byte*)Bitmap.BackBuffer.ToPointer();
-            int bytesPerPixel = (Bitmap.Format.BitsPerPixel + 7) / 8;
 
-            int index = pixel.Y * Stride + pixel.X * bytesPerPixel;
+            int index = pixel.Y * Stride + pixel.X * BytesPerPixel;
             int i = (int)colorOffset;
-            if (colorOffset == ColorOffset.Black) i = 0;
-            else ++colorOffset;
+            if (colorOffset == ColorOffset.All)
+            {
+                i = 0;
+            }
+            else
+            {
+                ++colorOffset;
+            }
 
             for (; i < (int)colorOffset; i++)
             {
@@ -167,7 +172,7 @@ namespace BitmapEditor
                 DataRow row = dataTable.NewRow();
                 for (int j = 0; j < Bitmap.PixelWidth; j++)
                 {
-                    if (colorOffset == ColorOffset.Black)
+                    if (colorOffset == ColorOffset.All)
                     {
                         row[j] = rawBitmapData[i * Stride + j * BytesPerPixel] > 0 ? 0 : 1;
                     } 
@@ -186,7 +191,7 @@ namespace BitmapEditor
                 if (e.ProposedValue is byte color && sender is DataTable table)
                 {
                     changing = true;
-                    if (colorOffset == ColorOffset.Black) color = color > 0 ? (byte)0 : (byte)255;
+                    if (colorOffset == ColorOffset.All) color = color > 0 ? (byte)0 : (byte)255;
                     (int X, int Y) pixel = (table.Columns.IndexOf(e.Column), table.Rows.IndexOf(e.Row));
                     table.Rows[pixel.X][pixel.Y] = color > 0 ? 0 : 1;
                     ChangePixel(pixel, colorOffset, color);
@@ -196,7 +201,6 @@ namespace BitmapEditor
 
             dataGrid.ItemsSource = dataTable.DefaultView;
         }
-
 
         public Color GetPixelColor((int X, int Y) pixel)
         {
@@ -210,6 +214,75 @@ namespace BitmapEditor
             return color;
         }
 
+        public void TwoWavesShading()
+        {
+            if (!IsBinary) throw new FormatException("Bitmap is not Binary");
+
+            double[,] shadeFactors = new double[Bitmap.PixelHeight, Bitmap.PixelWidth];
+
+            for (int row = 0; row < shadeFactors.GetLength(0); row++)
+            {
+                for (int col = 0; col < shadeFactors.GetLength(1); col++)
+                {
+                    shadeFactors[row, col] = Math.Round(CalcPixelFactor(row, col), 5);
+                }
+            }
+
+            SortedSet<double> uniqueFactors = new(Comparer<double>.Create((a, b) => b.CompareTo(a)));
+            foreach (var factor in shadeFactors)
+            {
+                uniqueFactors.Add(factor);
+            }
+            double convertRatio = 255d / (uniqueFactors.Count - 1);
+
+            Dictionary<double, byte> factorByteValues = new(uniqueFactors.Count);
+            int i = 0;
+            foreach (var factor in uniqueFactors)
+            {
+                factorByteValues.Add(factor, (byte)(convertRatio * i++));
+            }
+
+            for (int row = 0; row < shadeFactors.GetLength(0); row++)
+            {
+                for (int col = 0; col < shadeFactors.GetLength(1); col++)
+                {
+                    ChangePixel((col, row), ColorOffset.All, factorByteValues[shadeFactors[row, col]]);
+                }
+            }
+        }
+
+        private double CalcPixelFactor(int row, int col)
+        {
+            int res = RawBitmapData[row * Stride + col * BytesPerPixel] > 0 ? 0 : 1;
+            int firstWave = 0;
+            int secondWave = 0;
+
+            for (int rowInd = -2; rowInd < 3; rowInd++)
+            {
+                int curRow = row + rowInd;
+                if (curRow < 0 || curRow >= bitmap.PixelHeight) continue;
+                for (int colInd = -2; colInd < 3; colInd++)
+                {
+                    int curCol = col + colInd;
+                    if (curCol < 0 || curCol >= bitmap.PixelWidth ||
+                        (curRow == 0 && curCol == 0)) continue;
+
+                    int ind = curRow * Stride + curCol * BytesPerPixel;
+                    
+                    
+                    if (Math.Abs(curRow) == 2 || Math.Abs(curCol) == 2)
+                    {
+                        secondWave += RawBitmapData[ind] > 0 ? 0 : 1;
+                    }
+                    else
+                    {
+                        firstWave += RawBitmapData[ind] > 0 ? 0 : 1;
+                    }
+                }
+            }
+
+            return res + firstWave * 0.7 + secondWave * 0.3;
+        }
 
         private void OnPixelChanged((int X, int Y) pixel, Color color)
         {

@@ -97,13 +97,17 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type TabItem}">
-                        <Border x:Name="p" Padding="5">
-                            <ContentPresenter Content="{TemplateBinding Header}" HorizontalAlignment="Center"/>
+                        <Border x:Name="p">
+                            <Border Padding="5">
+                                <ContentPresenter Content="{TemplateBinding Header}" HorizontalAlignment="Center"/>
+                            </Border>
                         </Border>
-
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="False">
                                 <Setter Property="Background" TargetName="p" Value="LightGray"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" TargetName="p" Value="DarkGray"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -131,10 +135,13 @@
                             MinWidth="800" MinHeight="800" 
                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
 
-        <Menu VerticalAlignment="Top" Height="22" Grid.ColumnSpan="3" Background="White">
+        <Menu VerticalAlignment="Top" Height="24" Grid.ColumnSpan="3" Background="White">
             <MenuItem Header="File">
-                <MenuItem Header="Open" Click="OnOpenFileClick"></MenuItem>
-                <MenuItem Header="Save" Click="OnSaveFileClick"></MenuItem>
+                <MenuItem Header="Open" Click="OnOpenFileClick"/>
+                <MenuItem Header="Save" Click="OnSaveFileClick"/>
+            </MenuItem>
+            <MenuItem Header="Processing">
+                <MenuItem Header="TwoWaves" Click="OnTwoWavesClick"/>
             </MenuItem>
         </Menu>
 
@@ -143,9 +150,8 @@
 
         <Border Grid.Row="1" Grid.Column="1" Grid.RowSpan="3" BorderBrush="LightGray" BorderThickness="1"></Border>
 
-        <TabControl x:Name="SideBar" Grid.Column="2" Grid.Row="2" Height="{Binding ElementName=BitmapEditor, Path=ActualHeight}"
-                    SelectionChanged="SideBar_OnSelectionChanged">
-            <TabItem>
+        <TabControl x:Name="SideBar" Grid.Column="2" Grid.Row="2" Height="{Binding ElementName=BitmapEditor, Path=ActualHeight}">
+            <TabItem x:Name="PixelEditor">
                 <TabItem.Header>PixelEditor</TabItem.Header>
                 <TabItem.Content>
                     <StackPanel Orientation="Vertical">
@@ -167,11 +173,11 @@
                     </StackPanel>
                 </TabItem.Content>
             </TabItem>
-            <TabItem x:Name="MatrixEditorTab">
-                <TabItem.Header>Matrix Editor</TabItem.Header>
+            <TabItem x:Name="RgbEditorTab">
+                <TabItem.Header>RGB Editor</TabItem.Header>
                 <TabItem.Content>
                     <Grid>
-                        <Grid x:Name="ColorMatrices">
+                        <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="*"/>
@@ -184,10 +190,15 @@
                             <DataGrid x:Name="BlueMatrix" ScrollViewer.CanContentScroll="False" Grid.Row="2" Style="{StaticResource BitmapMatrix}"
                                   BorderBrush="CornflowerBlue" SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
                         </Grid>
-                        <Grid x:Name="BlackMatrices" IsEnabled="False" Visibility="Hidden">
-                            <DataGrid x:Name="BlackMatrix" ScrollViewer.CanContentScroll="False" Style="{StaticResource BitmapMatrix}"
-                                      SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
-                        </Grid>
+                    </Grid>
+                </TabItem.Content>
+            </TabItem>
+            <TabItem x:Name="BinaryEditorTab">
+                <TabItem.Header>Binary Editor</TabItem.Header>
+                <TabItem.Content>
+                    <Grid>
+                        <DataGrid x:Name="BlackMatrix" ScrollViewer.CanContentScroll="False" Style="{StaticResource BitmapMatrix}"
+                            SelectedCellsChanged="DataGrid_OnSelectedCellsChanged"/>
                     </Grid>
                 </TabItem.Content>
             </TabItem>
